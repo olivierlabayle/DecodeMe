@@ -54,12 +54,9 @@ RUN wget https://s3.amazonaws.com/plink1-assets/plink_linux_x86_64_20241022.zip 
     && chmod +x /usr/local/bin/plink
 
 # Install conda
-RUN wget -O Miniforge3.sh "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh" \
-    && bash Miniforge3.sh -b -p /opt/miniforge3 \
-    && /opt/miniforge3/bin/conda create -y -n liftover_env python=3 \
-    && /opt/miniforge3/bin/conda run -n liftover_env pip install pyliftover pandas \
-    && /opt/miniforge3/bin/conda clean -a -y \
-    && chmod -R 777 /opt/miniforge3/
+RUN wget https://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/liftOver \
+    && mv liftOver /usr/local/bin \
+    && chmod +x /usr/local/bin/liftOver
 
 COPY . /opt/decodeme
 
