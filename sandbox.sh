@@ -25,7 +25,7 @@ for bcf_file in rp_chrX_1_27440787.bcf rp_chrX_24026048_50656185.bcf rp_chrX_477
 done > stats_files.txt
 
 julia --project=/opt/genomicc-workflows/ --startup-file=no --sysimage=/opt/genomicc-workflows/GenomiccWorkflows.so --threads=auto \
-
+DecodeMe/scripts/merge_ref_panel_stats.jl stats_files.txt
 
 bed_prefix=decodeme_chrx_batch1_preimputation
 ukb_prefix=ukb22418_cX_b0_v2

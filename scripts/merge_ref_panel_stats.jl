@@ -12,6 +12,7 @@ function main()
     unique!(stats, :ID)
     stats.AF = stats.AC ./ stats.AN
     CSV.write("ref_panel_stats.tsv", stats; delim="\t")
+    return 0
 end
 
 main()
