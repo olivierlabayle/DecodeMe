@@ -9,6 +9,7 @@ end
 function main()
     # Find shared variants
     prefixes = readlines(ARGS[1])
+    output = ARGS[2]
     first_prefix = pop!(prefixes)
     shared_ids = get_bim_ids(first_prefix)
     for prefix in prefixes
@@ -16,7 +17,7 @@ function main()
         intersect!(shared_ids, bim_ids)
     end
     # Write them to file
-    open(ARGS[2], "w") do io
+    open(output, "w") do io
         for shared_id in shared_ids
             println(io, shared_id)
         end

@@ -5,6 +5,8 @@ import "structs.wdl"
 workflow merge_with_ukb {
     input {
         String docker_image = "olivierlabayle/genomicc:0.3.0"
+
+        Array[Files] reference_panel_files
         Array[PLINKFileset] decodeme_genotypes
         PLINKFileset ukb_genotypes
 
@@ -12,57 +14,71 @@ workflow merge_with_ukb {
         julia_threads = "auto"
     }
 
-        # Get generic Julia command
+    # Get generic Julia command
     call get_julia_cmd as get_julia_cmd {
         input:
             use_sysimage = julia_use_sysimage,
             threads = julia_threads
     }
 
-    scatter (fileset in decodeme_genotypes) {
-        call QCDecodeMeArray {
-            input:
-                docker_image = docker_image,
-                chr = fileset.chr,
-                bed_file = fileset.bed,
-                bim_file = fileset.bim,
-                fam_file = fileset.fam,
-        }
-    }
-
-    call QCUKBArray {
+    call make_ref_panel_stats {
         input:
             docker_image = docker_image,
-            chr = ukb_genotypes.chr,
-            bed_file = ukb_genotypes.bed,
-            bim_file = ukb_genotypes.bim,
-            fam_file = ukb_genotypes.fam,
-            sample_file = ukb_samples
+            julia_cmd = get_julia_cmd.julia_cmd,
+            bcf_csi_files = reference_panel_files
     }
+
+    # scatter (fileset in decodeme_genotypes) {
+    #     call QCDecodeMeArray {
+    #         input:
+    #             docker_image = docker_image,
+    #             chr = fileset.chr,
+    #             bed_file = fileset.bed,
+    #             bim_file = fileset.bim,
+    #             fam_file = fileset.fam,
+    #     }
+    # }
+
+    # call QCUKBArray {
+    #     input:
+    #         docker_image = docker_image,
+    #         chr = ukb_genotypes.chr,
+    #         bed_file = ukb_genotypes.bed,
+    #         bim_file = ukb_genotypes.bim,
+    #         fam_file = ukb_genotypes.fam,
+    #         sample_file = ukb_samples
+    # }
 
 
 }
 
-task get_julia_cmd {
+task make_ref_panel_stats {
     input {
-        String use_sysimage = "true"
-        String threads = "auto"
+        String docker_image
+        String julia_cmd
+        Array[File] bcf_csi_files
     }
+
     command <<<
-        julia_cmd_string="julia --project=/opt/PopGen --startup-file=no"
-        if [[ "~{use_sysimage}" == "true" ]]; then
-            julia_cmd_string+=" --sysimage=/opt/PopGen/sysimage.so"
-        fi
-        if [[ "~{threads}" == "auto" ]]; then
-            julia_cmd_string+=" --threads=auto"
-        fi
-        julia_cmd_string+=" /opt/PopGen/bin/wdl-gwas.jl"
-        echo "$julia_cmd_string"
+        for bcf_file in ~{sep=" " bcf_csi_files}; do
+            if [[ "${bcf_file}" == *.bcf ]]; then
+                bcftools query -f '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%INFO/AC\t%INFO/AN\n' ${bcf_file} > ${bcf_file%.bcf}.tsv
+                echo "${bcf_file%.bcf}.tsv"
+            fi
+        done > stats_files.txt
+
+        ${julia_cmd} /opt/decodeme/scripts/merge_ref_panel_stats.jl stats_files.txt
     >>>
 
     output {
-        String julia_cmd = read_string(stdout())
+        File ref_panel_stats = "ref_panel_stats.tsv"
     }
+
+    runtime {
+        docker: docker_image
+        dx_instance_type: "mem1_ssd1_v2_x8"
+    }
+
 }
 
 task QCDecodeMeArray {
