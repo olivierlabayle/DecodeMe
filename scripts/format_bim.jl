@@ -8,7 +8,7 @@ function main()
         bim,
         :A1 => (x -> replace.(x, "-" => "0")) => :A1,
         :A2 => (x -> replace.(x, "-" => "0")) => :A2,
-        [:CHROM, :POS] => ByRow((c, p, a1, a2) -> string(c, ":", p)) => :ID
+        [:CHROM, :POS] => ByRow((c, p) -> string(c, ":", p)) => :ID
     )
     CSV.write(bim_file, bim; header=false, delim="\t")
     return 0
