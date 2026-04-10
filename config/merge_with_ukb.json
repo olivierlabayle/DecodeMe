@@ -12,5 +12,6 @@
         "bed": "dx://project-Ggv5Q00JFKgG9P4Z7Fv71bxz:file-FxXb5xjJkF6PpqqK0p2gZzvF",
         "bim": "dx://project-Ggv5Q00JFKgG9P4Z7Fv71bxz:file-FxXZxxjJkF6BXzY51BBbz1fF",
         "fam": "dx://project-Ggv5Q00JFKgG9P4Z7Fv71bxz:file-J4jXk90J1678XBv6QYyZ1fy5"
-    }
+    },
+    "merge_with_ukb.ukb_samples": "dx://project-Ggv5Q00JFKgG9P4Z7Fv71bxz"
 }

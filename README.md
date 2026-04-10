@@ -2,6 +2,16 @@
 
 This repository holds the instructions for reproducing the chromosome X DecodeME results.
 
+## Notes / Questions
+
+- call rate < 0.98 after merge --> If a variant has a bad call rate in DecodeMe (e.g. 5000 samples) it will still proceed. Should I enforce this for every batch?
+- Was the imputation performed on the intersection of variants betweem DecodeMe and UKB ? Otherwise imputation might still be slightly biased.
+- Is there a UKB control sample file? For now I have extracted one from the imputed chr1 fam file.
+- To Dominique set parental id to 0 is not known ?
+
+23       AX-94364057    T    -    0.0001168     8565 --> A1 and A2, total < 200 SNPs
+23       AX-94364058    0    G            0     8564 --> A1 only, ~1200 SNPs in batch 1
+
 ## Prerequisites
 
 - Install the [dx toolkit and upload agent](https://documentation.dnanexus.com/downloads) on your local machine.
