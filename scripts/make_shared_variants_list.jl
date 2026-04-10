@@ -17,7 +17,7 @@ function main()
     end
     # Write them to file
     open(ARGS[2], "w") do io
-        for shared_id in shared_positions
+        for shared_id in shared_ids
             println(io, shared_id)
         end
     end
