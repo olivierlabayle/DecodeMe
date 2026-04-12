@@ -30,6 +30,7 @@ workflow merge_with_ukb {
             bcf_csi_files = reference_panel_files
     }
 
+    # QC and Liftover DecodeMe batches
     scatter (decodeme_batch in decodeme_genotypes) {
         call QCAndLiftOverArray as QCAndLiftOverDecodeMe {
             input:
@@ -42,6 +43,33 @@ workflow merge_with_ukb {
         }
     }
 
+    # Merge DecodeMe batches
+    scatter (fileset in QCAndLiftOverDecodeMe.plink_fileset) {
+        File decodeme_batches_bed_files = fileset.bed
+    }
+
+    call MergeGenotypingArrays as MergeDMEGenotypingArrays {
+        input:
+            docker_image = docker_image,
+            julia_cmd = get_julia_cmd.julia_cmd,
+            bed_files = decodeme_batches_bed_files,
+            plink_filesets = QCAndLiftOverDecodeMe.plink_fileset,
+            output_prefix = "decodeme.chrX.hg38.merged_batches"
+    }
+
+    # QC DecodeMe with Ref
+    call QCWithRef as QCDecodeMeWithRef {
+        input:
+            docker_image = docker_image,
+            julia_cmd = get_julia_cmd.julia_cmd,
+            chr = MergeDMEGenotypingArrays.plink_fileset.chr,
+            bed_file = MergeDMEGenotypingArrays.plink_fileset.bed,
+            bim_file = MergeDMEGenotypingArrays.plink_fileset.bim,
+            fam_file = MergeDMEGenotypingArrays.plink_fileset.fam,
+            ref_stats = make_ref_panel_stats.ref_panel_stats
+    }
+
+    # QC and Liftover UKB Array
     call QCAndLiftOverArray as QCAndLiftOverUKB {
         input:
             docker_image = docker_image,
@@ -52,23 +80,99 @@ workflow merge_with_ukb {
             hwe_pval = "1e-9"
     }
 
-    scatter (fileset in QCAndLiftOverDecodeMe.plink_fileset) {
-        File decodeme_batches_bed_files = fileset.bed
-    }
-
-    call MergeGenotypingArrays as MergeDMEGenotypingArrays {
+    # QC UKB with Ref
+    call QCWithRef as QCUKBWithRef {
         input:
             docker_image = docker_image,
-            bed_files = decodeme_batches_bed_files,
-            plink_filesets = QCAndLiftOverDecodeMe.plink_fileset,
-            output_prefix = "decodeme.chrX.hg38.merged_batches"
+            julia_cmd = get_julia_cmd.julia_cmd,
+            chr = QCAndLiftOverUKB.plink_fileset.chr,
+            bed_file = QCAndLiftOverUKB.plink_fileset.bed,
+            bim_file = QCAndLiftOverUKB.plink_fileset.bim,
+            fam_file = QCAndLiftOverUKB.plink_fileset.fam,
+            ref_stats = make_ref_panel_stats.ref_panel_stats
+    }
+
+    # Merge DecodeMe and UKB
+    Array[PLINKFileset] decodeme_and_ukb_filesets = [QCDecodeMeWithRef.plink_fileset, QCUKBWithRef.plink_fileset]
+    scatter (fileset in decodeme_and_ukb_filesets) {
+        File decodeme_and_ukb_bed_files = fileset.bed
+    }
+    call MergeGenotypingArrays as MergeUKBDecodeMe{
+        input:
+            docker_image = docker_image,
+            julia_cmd = get_julia_cmd.julia_cmd,
+            bed_files = decodeme_and_ukb_bed_files,
+            plink_filesets = decodeme_and_ukb_filesets,
+            output_prefix = "chrX.hg38.merged.ukb_decodeme"
     }
 
     output {
-        Array[PLINKFileset] lifted_over_decodeme_batches = QCAndLiftOverDecodeMe.plink_fileset
-        PLINKFileset lifted_over_ukb = QCAndLiftOverUKB.plink_fileset
         File ref_panel_stats = make_ref_panel_stats.ref_panel_stats
+
+        Array[PLINKFileset] lifted_over_decodeme_batches = QCAndLiftOverDecodeMe.plink_fileset
         PLINKFileset merged_decodeme_array = MergeDMEGenotypingArrays.plink_fileset
+        PLINKFileset decodeme_qced_with_ref = QCDecodeMeWithRef.plink_fileset
+        File decodeme_ref_action_stats = QCDecodeMeWithRef.action_stats
+
+        PLINKFileset lifted_over_ukb = QCAndLiftOverUKB.plink_fileset
+        PLINKFileset ukb_qced_with_ref = QCUKBWithRef.plink_fileset
+        File ukb_ref_action_stats = QCUKBWithRef.action_stats
+
+        PLINKFileset merged_qced_fileset = MergeUKBDecodeMe.plink_fileset
+    }
+}
+
+task QCWithRef {
+    input {
+        String docker_image
+        String julia_cmd
+        String chr
+        File bed_file
+        File bim_file
+        File fam_file
+        File ref_stats
+    }
+
+    String input_prefix = basename(bed_file, ".bed")
+
+    command <<<
+        bed_prefix=$(dirname "~{bed_file}")/$(basename "~{bed_file}" .bed)
+        
+        plink2 \
+            --bfile ${bed_prefix} \
+            --nonfounders \
+            --freq \
+            --out ${bed_prefix}
+
+        ~{julia_cmd} /opt/decodeme/scripts/qc_with_ref.jl ${bed_prefix} ~{ref_stats} ~{input_prefix}
+
+        plink \
+            --bfile ${bed_prefix} \
+            --flip ~{input_prefix}.to_flip.txt \
+            --exclude ~{input_prefix}.to_drop.txt \
+            --make-bed \
+            --out temp
+
+        plink \
+            --bfile temp \
+            --update-name ~{input_prefix}.new_ids.tsv \
+            --make-bed \
+            --out ~{input_prefix}.ref_qced
+    >>>
+
+    output {
+        File action_stats = "${input_prefix}.action_stats.tsv"
+        PLINKFileset plink_fileset = object {
+            chr: chr,
+            bed: "${input_prefix}.ref_qced.bed",
+            bim: "${input_prefix}.ref_qced.bim",
+            fam: "${input_prefix}.ref_qced.fam"
+        }
+    }
+
+    runtime {
+        docker: docker_image
+        dx_instance_type: "mem1_ssd1_v2_x8"
     }
 }
 
@@ -175,6 +279,7 @@ task QCAndLiftOverArray {
 task MergeGenotypingArrays {
     input {
         String docker_image
+        String julia_cmd
         Array[File] bed_files
         Array[PLINKFileset] plink_filesets
         String output_prefix
@@ -185,10 +290,13 @@ task MergeGenotypingArrays {
             echo "${f%.bed}"
         done > merge_list.txt
 
+        ~{julia_cmd} /opt/decodeme/scripts/make_shared_variants_list.jl merge_list.txt shared_variants.txt
+
         plink \
             --biallelic-only \
             --merge-list merge_list.txt \
             --output-chr chrMT \
+            --extract shared_variants.txt \
             --make-bed \
             --out ~{output_prefix}
     >>>
@@ -206,38 +314,4 @@ task MergeGenotypingArrays {
         docker: docker_image
         dx_instance_type: "mem1_ssd1_v2_x8"
     }
-}
-
-
-task MergeDecodeMeAndUKB {
-    input {
-        String docker_image
-        String ukb_chr
-        File ukb_bed_file
-        File ukb_bim_file
-        File ukb_fam_file
-        File ukb_sample_file
-
-        Array[File] decodeme_bed_files
-        Array[File] decodeme_bim_files
-        Array[File] decodeme_fam_files
-    }
-
-    String ukb_bed_prefix = basename(ukb_bed_file, ".bed")
-
-    command <<<
-    for f in ~{sep=" " decodeme_bed_files}; do
-        echo "${f%.bed}"
-    done > merge_list.txt
-    echo "~{ukb_bed_prefix}" >> merge_list.txt
-
-    plink \
-        --biallelic-only \
-        --merge-list merge_list.txt \
-        --extract range shared_variants.txt
-        --geno 0.02 \
-        --mind 0.03 \
-        --export bcf \
-        --out chrX
-    >>>
 }
