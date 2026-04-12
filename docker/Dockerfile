@@ -53,10 +53,13 @@ RUN wget https://s3.amazonaws.com/plink1-assets/plink_linux_x86_64_20241022.zip 
     && mv plink /usr/local/bin \
     && chmod +x /usr/local/bin/plink
 
-# Install conda
+# Install liftover
 RUN wget https://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/liftOver \
     && mv liftOver /usr/local/bin \
     && chmod +x /usr/local/bin/liftOver
+
+RUN wget https://hgdownload.soe.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz \
+    && mv hg19ToHg38.over.chain.gz /opt
 
 COPY . /opt/decodeme
 
