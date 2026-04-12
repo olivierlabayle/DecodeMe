@@ -13,7 +13,7 @@
         "bim": "dx://project-Ggv5Q00JFKgG9P4Z7Fv71bxz:file-FxXZxxjJkF6BXzY51BBbz1fF",
         "fam": "dx://project-Ggv5Q00JFKgG9P4Z7Fv71bxz:file-J4jXk90J1678XBv6QYyZ1fy5"
     },
-    "merge_with_ukb.ukb_samples": "dx://project-Ggv5Q00JFKgG9P4Z7Fv71bxz",
+    "merge_with_ukb.ukb_samples": "dx://project-Ggv5Q00JFKgG9P4Z7Fv71bxz:/decodeme-chrX-genotyped/ukb_control_samples.tsv",
     "merge_with_ukb.reference_panel_files": [
         "dx://project-Ggv5Q00JFKgG9P4Z7Fv71bxz:/ukb-imputation/impute5/ref_xcf_phased/chrX/rp_chrX_1_27440787.bcf",
         "dx://project-Ggv5Q00JFKgG9P4Z7Fv71bxz:/ukb-imputation/impute5/ref_xcf_phased/chrX/rp_chrX_1_27440787.bcf.csi",
