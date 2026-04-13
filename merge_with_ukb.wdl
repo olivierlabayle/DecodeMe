@@ -40,7 +40,7 @@ workflow merge_with_ukb {
                 bim_file = decodeme_batch.bim,
                 fam_file = decodeme_batch.fam,
                 hwe_pval = "1e-12",
-                use_sample_file = false
+                use_sample_file = "false"
         }
     }
 
@@ -80,7 +80,7 @@ workflow merge_with_ukb {
             fam_file = ukb_genotypes.fam,
             hwe_pval = "1e-9",
             sample_keep_file=ukb_samples,
-            use_sample_file = true
+            use_sample_file = "true"
     }
 
     # QC UKB with Ref
@@ -227,14 +227,18 @@ task QCAndLiftOverArray {
         File fam_file
         String hwe_pval
         File? sample_keep_file
-        Boolean use_sample_file = false
+        String use_sample_file = "false"
     }
 
     String input_prefix = basename(bed_file, ".bed")
-    String? keep_opt = if (use_sample_file) then "--keep " + sample_keep_file else ""
 
     command <<<
         bed_prefix=$(dirname "~{bed_file}")/$(basename "~{bed_file}" .bed)
+
+        keep_opt=""
+        if [[ "~{use_sample_file}" == "true" ]]; then
+            keep_opt="--keep ~{sample_keep_file}"
+        fi
 
         # Apply HWE QC and format chromosome for liftover
         plink \
@@ -246,7 +250,7 @@ task QCAndLiftOverArray {
             --output-chr chrMT \
             --freq \
             --make-bed \
-            --out ~{input_prefix}.hwe ~{keep_opt}
+            --out ~{input_prefix}.hwe ${keep_opt}
         # Make bed file for liftover
         awk '{
             chr = $1;
@@ -350,7 +354,7 @@ task ConvertToBCF {
         plink2 \
             --bfile ${bed_prefix} \
             --export bcf id-paste=iid \
-            --out ${bed_prefix}
+            --out ~{input_prefix}
     >>>
 
     output {
