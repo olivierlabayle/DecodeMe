@@ -53,7 +53,7 @@ function get_action(row, refmap)
             else
                 return "FLIP (PALYNDROMIC-LOW-MAF)"
             end
-        elseif (abs(row.ALT_FREQS - 0.5) < 0.05) & (abs(ref_alt_af - 0.5) < 0.05)
+        elseif (abs(row.ALT_FREQS - 0.5) < 0.05) && (abs(ref_alt_af - 0.5) < 0.05)
             return "KEEP (OPPOSITE-MINOR-ALLELE-BUT-NEAR-0.5)"
         # This should not occur much
         else
@@ -63,16 +63,20 @@ function get_action(row, refmap)
         if "0" in bim_alleles || "-" in bim_alleles
             return "DROP (UNKOWN-ALLELE)"
         else
-            new_minor_allele = ALLELE_COMPLEMENT[row.MINOR_ALLELE]
-            new_bim_alleles = Set([ALLELE_COMPLEMENT[row.A1], ALLELE_COMPLEMENT[row.A2]])
-            if new_bim_alleles == ref_alleles
-                if ref_minor_allele == new_minor_allele
-                    return "FLIP (COMPLEMENT-FULL-MATCH)"
-                elseif (abs(row.ALT_FREQS - 0.5) < 0.05) & (abs(ref_alt_af - 0.5) < 0.05)
-                    return "KEEP (COMPLEMENT-OPPOSITE-MINOR-ALLELE-BUT-NEAR-0.5)"
-                # This should not occur much
+            if (row.A1 in keys(ALLELE_COMPLEMENT)) && (row.A2 in keys(ALLELE_COMPLEMENT))
+                new_minor_allele = ALLELE_COMPLEMENT[row.MINOR_ALLELE]
+                new_bim_alleles = Set([ALLELE_COMPLEMENT[row.A1], ALLELE_COMPLEMENT[row.A2]])
+                if new_bim_alleles == ref_alleles
+                    if ref_minor_allele == new_minor_allele
+                        return "FLIP (COMPLEMENT-FULL-MATCH)"
+                    elseif (abs(row.ALT_FREQS - 0.5) < 0.05) && (abs(ref_alt_af - 0.5) < 0.05)
+                        return "KEEP (COMPLEMENT-OPPOSITE-MINOR-ALLELE-BUT-NEAR-0.5)"
+                    # This should not occur much
+                    else
+                        return "DROP (COMPLEMENT-OPPOSITE-MINOR-ALLELE)"
+                    end
                 else
-                    return "DROP (COMPLEMENT-OPPOSITE-MINOR-ALLELE)"
+                    return "DROP (ALLELES-NOT-MATCHING)"
                 end
             else
                 return "DROP (ALLELES-NOT-MATCHING)"

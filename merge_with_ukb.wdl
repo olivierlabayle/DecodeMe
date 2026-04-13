@@ -39,7 +39,8 @@ workflow merge_with_ukb {
                 bed_file = decodeme_batch.bed,
                 bim_file = decodeme_batch.bim,
                 fam_file = decodeme_batch.fam,
-                hwe_pval = "1e-12"
+                hwe_pval = "1e-12",
+                use_sample_file = false
         }
     }
 
@@ -77,7 +78,9 @@ workflow merge_with_ukb {
             bed_file = ukb_genotypes.bed,
             bim_file = ukb_genotypes.bim,
             fam_file = ukb_genotypes.fam,
-            hwe_pval = "1e-9"
+            hwe_pval = "1e-9",
+            sample_keep_file=ukb_samples,
+            use_sample_file = true
     }
 
     # QC UKB with Ref
@@ -213,9 +216,12 @@ task QCAndLiftOverArray {
         File bim_file
         File fam_file
         String hwe_pval
+        File? sample_keep_file
+        Boolean use_sample_file = false
     }
 
     String input_prefix = basename(bed_file, ".bed")
+    String keep_opt = if (use_sample_file) then "--keep " + sample_keep_file else ""
 
     command <<<
         bed_prefix=$(dirname "~{bed_file}")/$(basename "~{bed_file}" .bed)
@@ -230,7 +236,7 @@ task QCAndLiftOverArray {
             --output-chr chrMT \
             --freq \
             --make-bed \
-            --out ~{input_prefix}.hwe
+            --out ~{input_prefix}.hwe ~{keep_opt}
         # Make bed file for liftover
         awk '{
             chr = $1;
@@ -257,6 +263,7 @@ task QCAndLiftOverArray {
             --update-map update_map_positions.txt \
             --update-chr update_map_chr.txt \
             --extract kept_snps.txt \
+            --output-chr chrMT \
             --make-bed \
             --out ~{input_prefix}.hwe.hg38
     >>>
