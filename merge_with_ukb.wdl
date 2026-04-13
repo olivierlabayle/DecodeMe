@@ -231,7 +231,7 @@ task QCAndLiftOverArray {
     }
 
     String input_prefix = basename(bed_file, ".bed")
-    String keep_opt = if (use_sample_file) then "--keep " + sample_keep_file else ""
+    String? keep_opt = if (use_sample_file) then "--keep " + sample_keep_file else ""
 
     command <<<
         bed_prefix=$(dirname "~{bed_file}")/$(basename "~{bed_file}" .bed)
