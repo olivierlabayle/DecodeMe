@@ -109,6 +109,15 @@ workflow merge_with_ukb {
             output_prefix = "chrX.hg38.merged.ukb_decodeme"
     }
 
+    call ConvertToBCF {
+        input:
+            docker_image = docker_image,
+            chr=MergeUKBDecodeMe.plink_fileset.chr,
+            bed_file=MergeUKBDecodeMe.plink_fileset.bed,
+            bim_file=MergeUKBDecodeMe.plink_fileset.bim,
+            fam_file=MergeUKBDecodeMe.plink_fileset.fam
+    }
+
     output {
         File ref_panel_stats = make_ref_panel_stats.ref_panel_stats
 
@@ -122,6 +131,7 @@ workflow merge_with_ukb {
         File ukb_ref_action_stats = QCUKBWithRef.action_stats
 
         PLINKFileset merged_qced_fileset = MergeUKBDecodeMe.plink_fileset
+        File merged_qced_bcf = ConvertToBCF.bcf_file
     }
 }
 
@@ -315,6 +325,36 @@ task MergeGenotypingArrays {
             bim: "${output_prefix}.bim",
             fam: "${output_prefix}.fam"
         }
+    }
+
+    runtime {
+        docker: docker_image
+        dx_instance_type: "mem1_ssd1_v2_x8"
+    }
+}
+
+task ConvertToBCF {
+    input {
+        String docker_image
+        String chr
+        File bed_file
+        File bim_file
+        File fam_file
+    }
+
+    String input_prefix = basename(bed_file, ".bed")
+
+    command <<<
+        bed_prefix=$(dirname "~{bed_file}")/$(basename "~{bed_file}" .bed)
+
+        plink2 \
+            --bfile ${bed_prefix} \
+            --export bcf id-paste=iid \
+            --out ${bed_prefix}
+    >>>
+
+    output {
+        File bcf_file = "${input_prefix}.bcf"
     }
 
     runtime {
