@@ -2,6 +2,13 @@
 
 This repository holds the instructions for reproducing the chromosome X DecodeME results.
 
+## Todo List
+
+- [ ] Further QC using instructions [here](https://onlinelibrary.wiley.com/doi/full/10.1002%2Fgepi.21782)
+- [ ] DecodeMe Batch GWAS for batch effects
+- [ ] Imputation
+- [ ] GWAS
+
 ## Notes / Questions
 
 - call rate < 0.98 after merge --> If a variant has a bad call rate in DecodeMe (e.g. 5000 samples) it will still proceed. Should I enforce this for every batch?
